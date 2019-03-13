@@ -97,7 +97,7 @@ USER ${NB_USER}
 # setup environment
 ENV PYTHONPATH $PYTHONPATH:${HOME}/LavaVu
 
-# get LavaVu, compile, delete some unnecessary files, trust notebooks
+# get LavaVu, compile, delete some unnecessary files, trust notebooks, copy to home dir
 RUN cd ~ && \
     git clone --branch "master" --single-branch https://github.com/OKaluza/LavaVu && \
     cd LavaVu && \
@@ -106,7 +106,8 @@ RUN cd ~ && \
     rm -fr tmp
 
 RUN cd ~ && \
-    find LavaVu/notebooks -name \*.ipynb  -print0 | xargs -0 jupyter trust
+    find LavaVu/notebooks -name \*.ipynb  -print0 | xargs -0 jupyter trust && \
+    rsync -av ${HOME}/LavaVu/notebooks ~
 
 # Add a notebook profile.
 RUN cd ~ && \
