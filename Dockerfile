@@ -29,8 +29,12 @@ RUN apt-get update -qq && \
         rsync \
         vim \
         less \
-        xauth \
-        tini
+        xauth
+
+# Add Tini
+ENV TINI_VERSION v0.18.0
+ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /tini
+RUN chmod +x /tini
 
 # install the notebook package
 RUN pip install --no-cache --upgrade pip && \
@@ -96,7 +100,7 @@ RUN whoami; cd ~ && \
     echo "c.NotebookApp.token = ''" >> .jupyter/jupyter_notebook_config.py
 
 # note we use xvfb which to mimic the X display for lavavu
-ENTRYPOINT ["/sbin/tini", "--", "/usr/local/bin/xvfbrun.sh"]
+ENTRYPOINT ["/tini", "--", "/usr/local/bin/xvfbrun.sh"]
 
 # launch notebook
 # CMD scripts/run-jupyter.sh
