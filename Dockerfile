@@ -52,8 +52,9 @@ RUN pip install \
         pillow \
         scipy \
         h5py \
-        rise \
-        lavavu
+        rise
+
+#RUN pip install lavavu
 
 RUN pip install jupyterlab
 
@@ -92,9 +93,23 @@ USER root
 RUN chown -R ${NB_UID} ${HOME}
 USER ${NB_USER}
 
+#Install LavaVu dev version
+# setup environment
+ENV PYTHONPATH $PYTHONPATH:${HOME}/LavaVu
+
+# get LavaVu, compile, delete some unnecessary files, trust notebooks
+RUN cd ~ && \
+    git clone --branch "master" --single-branch https://github.com/OKaluza/LavaVu && \
+    cd LavaVu && \
+    #git checkout tags/v1.1 && \
+    make LIBPNG=1 TIFF=1 VIDEO=1 -j$(nproc) && \
+    rm -fr tmp
+
+RUN cd ~ && \
+    find LavaVu/notebooks -name \*.ipynb  -print0 | xargs -0 jupyter trust
+
 # Add a notebook profile.
-RUN whoami; cd ~ && \
-    pwd && \
+RUN cd ~ && \
     mkdir .jupyter && \
     echo "c.NotebookApp.ip = '0.0.0.0'" >> .jupyter/jupyter_notebook_config.py && \
     echo "c.NotebookApp.token = ''" >> .jupyter/jupyter_notebook_config.py
