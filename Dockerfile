@@ -108,7 +108,7 @@ RUN cd ~ && \
 
 RUN cd ~ && \
     find LavaVu/notebooks -name \*.ipynb  -print0 | xargs -0 jupyter trust && \
-    rsync -av ${HOME}/LavaVu/notebooks ~
+    cp ${HOME}/LavaVu/notebooks/* ~
 
 # Add a notebook profile.
 RUN cd ~ && \
