@@ -1,16 +1,7 @@
-# Use phusion/baseimage as base image. To make your builds reproducible, make
-# sure you lock down to a specific version, not to `latest`!
-# See https://github.com/phusion/baseimage-docker/blob/master/Changelog.md for
-# a list of version numbers.
-FROM phusion/baseimage:0.11
+FROM python:3.7-slim
 
 LABEL maintainer="owen.kaluza@monash.edu"
 LABEL repo="https://github.com/OKaluza/LavaVu"
-
-# Use baseimage-docker's init system.
-CMD ["/sbin/my_init"]
-
-# ...put your own build instructions here...
 
 # install things
 RUN apt-get update -qq && \
@@ -18,9 +9,6 @@ RUN apt-get update -qq && \
         bash-completion \
         build-essential \
         git \
-        python3 \
-        python3-dev \
-        python3-pip \
         xorg-dev \
         ssh \
         curl \
@@ -43,13 +31,17 @@ RUN apt-get update -qq && \
         less \
         xauth
 
-RUN pip3 install --upgrade pip
-RUN pip3 install setuptools
-RUN pip3 install \
+# install the notebook package
+RUN pip install --no-cache --upgrade pip && \
+    pip install --no-cache notebook
+
+RUN pip install setuptools
+RUN pip install \
         packaging \
         appdirs \
         numpy \
         jupyter \
+        notebook \
         matplotlib \
         runipy \
         pillow \
@@ -58,33 +50,49 @@ RUN pip3 install \
         rise \
         lavavu
 
+RUN pip install jupyterlab
+
 #Setup RISE for notebook slideshows
 RUN jupyter-nbextension install rise --py --sys-prefix
+RUN jupyter nbextension enable rise --py --sys-prefix
 
-# Clean up APT when done.
-RUN apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+ENV NB_USER jovyan
+ENV NB_UID 1000
+ENV HOME /home/${NB_USER}
 
-RUN mkdir -p /etc/my_init.d
+# create user with a home directory
+ARG NB_USER
+ARG NB_UID
+ENV USER ${NB_USER}
+ENV HOME /home/${NB_USER}
+
+RUN adduser --disabled-password \
+    --gecos "Default user" \
+    --uid ${NB_UID} \
+    ${NB_USER}
+WORKDIR ${HOME}
+
+# helper file for xvfb (for LavaVu)
+ADD scripts/xvfb-run /usr/bin/
+RUN chmod +x /usr/bin/xvfb-run
+#ADD scripts/entrypoint.sh /usr/local/bin/entrypoint.sh
 
 # script for xvfb-run.  all docker commands will effectively run under this via the entrypoint
-#RUN printf "#\041/bin/sh \n rm -f /tmp/.X99-lock && Xvfb -screen 0 1600x1200x16 \$@\n" >> /etc/my_init.d/xvfb.sh
+RUN printf "#\041/bin/sh \n rm -f /tmp/.X99-lock && xvfb-run -s '-screen 0 1600x1200x16' \$@" >> /usr/local/bin/xvfbrun.sh && \
+chmod +x /usr/local/bin/xvfbrun.sh
 
-RUN printf "#\041/bin/sh \n killall Xvfb \nrm -f /tmp/.X99-lock && Xvfb -screen 0 1600x1200x16 & \njupyter notebook --no-browser --allow-root\n" >> /etc/my_init.d/xvfb.sh
-
-RUN chmod +x /etc/my_init.d/xvfb.sh
+USER ${USER}
 
 # Add a notebook profile.
-RUN mkdir -p -m 700 /root/.jupyter/ && \
-    echo "c.NotebookApp.ip = '0.0.0.0'" >> /root/.jupyter/jupyter_notebook_config.py && \
-    echo "c.NotebookApp.token = ''" >> /root/.jupyter/jupyter_notebook_config.py
+RUN whoami; cd ~ && \
+    pwd && \
+    mkdir .jupyter && \
+    echo "c.NotebookApp.ip = '0.0.0.0'" >> .jupyter/jupyter_notebook_config.py && \
+    echo "c.NotebookApp.token = ''" >> .jupyter/jupyter_notebook_config.py
 
-WORKDIR /
-
-# expose notebook port
-EXPOSE 8888
+# note we use xvfb which to mimic the X display for lavavu
+ENTRYPOINT ["/usr/local/bin/xvfbrun.sh"]
 
 # launch notebook
-#CMD ["jupyter", "notebook", "--no-browser", "--allow-root"]
-#CMD ["jupyter", "notebook", " --no-browser", "--allow-root", "--ip=0.0.0.0"]
-
-
+# CMD scripts/run-jupyter.sh
+CMD ["jupyter", "notebook", "--ip='0.0.0.0'", "--NotebookApp.token='' ", "--no-browser"]
