@@ -55,6 +55,7 @@ RUN pip install \
         rise
 
 #RUN pip install lavavu
+RUN pip install jupyter-server-proxy
 
 RUN pip install jupyterlab
 
