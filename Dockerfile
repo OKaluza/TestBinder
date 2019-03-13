@@ -102,7 +102,7 @@ ENV PYTHONPATH $PYTHONPATH:${HOME}/LavaVu
 RUN cd ~ && \
     git clone --branch "master" --single-branch https://github.com/OKaluza/LavaVu && \
     cd LavaVu && \
-    #git checkout tags/v1.1 && \
+    #git checkout tags/v1.3.2 && \
     make LIBPNG=1 TIFF=1 VIDEO=1 -j$(nproc) && \
     rm -fr tmp
 
