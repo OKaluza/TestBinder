@@ -29,7 +29,8 @@ RUN apt-get update -qq && \
         rsync \
         vim \
         less \
-        xauth
+        xauth \
+        tini
 
 # install the notebook package
 RUN pip install --no-cache --upgrade pip && \
@@ -81,7 +82,11 @@ RUN chmod +x /usr/bin/xvfb-run
 RUN printf "#\041/bin/sh \n rm -f /tmp/.X99-lock && xvfb-run -s '-screen 0 1600x1200x16' \$@" >> /usr/local/bin/xvfbrun.sh && \
 chmod +x /usr/local/bin/xvfbrun.sh
 
-USER ${USER}
+# Make sure the contents of our repo are in ${HOME}
+COPY . ${HOME}
+USER root
+RUN chown -R ${NB_UID} ${HOME}
+USER ${NB_USER}
 
 # Add a notebook profile.
 RUN whoami; cd ~ && \
@@ -91,8 +96,9 @@ RUN whoami; cd ~ && \
     echo "c.NotebookApp.token = ''" >> .jupyter/jupyter_notebook_config.py
 
 # note we use xvfb which to mimic the X display for lavavu
-ENTRYPOINT ["/usr/local/bin/xvfbrun.sh"]
+ENTRYPOINT ["/sbin/tini", "--", "/usr/local/bin/xvfbrun.sh"]
 
 # launch notebook
 # CMD scripts/run-jupyter.sh
 CMD ["jupyter", "notebook", "--ip='0.0.0.0'", "--NotebookApp.token='' ", "--no-browser"]
+
